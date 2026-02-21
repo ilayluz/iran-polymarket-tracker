@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>US-Iran Strike Probability Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>US-Iran Strike Probability Dashboard</h1>
+    <p class="subtitle">
+      Based on <a href="https://polymarket.com/event/us-strikes-iran-by" target="_blank">Polymarket prediction markets</a>
+    </p>
+
+    <!-- Controls row -->
+    <div class="controls">
+      <div class="control-group">
+        <span class="label">View:</span>
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="dist-type" value="cdf" checked> Cumulative (CDF)
+          </label>
+          <label>
+            <input type="radio" name="dist-type" value="pdf"> Density (PDF)
+          </label>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="joy-toggle"> Ridge Plot (historical overlay)
+        </label>
+      </div>
+
+      <button class="update-btn" id="update-btn">Update</button>
+    </div>
+
+    <!-- Time slider -->
+    <div class="slider-section">
+      <div class="label">Historical snapshot:</div>
+      <div class="slider-wrapper">
+        <input type="range" id="time-slider" min="0" max="100" step="1" value="100">
+        <div class="slider-marks" id="slider-marks"></div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div id="main-chart"></div>
+
+    <!-- Market table -->
+    <div id="market-table"></div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay hidden" id="loading-overlay">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Plotly.js CDN -->
+  <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+
+  <!-- App modules -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

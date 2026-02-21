@@ -15,3 +15,6 @@ screenshot.png
 
 # Claude internal
 .claude/
+
+# Wrangler cache (contains Cloudflare account ID)
+.wrangler/
