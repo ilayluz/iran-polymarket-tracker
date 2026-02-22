@@ -283,6 +283,132 @@ function buildSnapshot(markets, histories, asOf) {
 }
 
 /**
+ * Find the date (as ordinal float) where the CDF crosses a given percentile.
+ * Linearly interpolates between grid points for sub-day precision.
+ *
+ * @param {Float64Array} fineDates — daily grid ordinals
+ * @param {Float64Array} fineCdf — CDF values on that grid
+ * @param {number} percentile — target CDF value (e.g. 0.25, 0.50, 0.75)
+ * @returns {number|null} ordinal (float) or null if CDF never reaches the percentile
+ */
+function getPercentileDate(fineDates, fineCdf, percentile) {
+  for (let i = 0; i < fineCdf.length; i++) {
+    if (fineCdf[i] >= percentile) {
+      if (i === 0) return fineDates[0];
+      // Linear interpolation between [i-1] and [i]
+      const frac = (percentile - fineCdf[i - 1]) / (fineCdf[i] - fineCdf[i - 1]);
+      return fineDates[i - 1] + frac * (fineDates[i] - fineDates[i - 1]);
+    }
+  }
+  return null;
+}
+
+/**
+ * Build the median timeline: for each historical timestamp, compute the
+ * predicted strike date at percentiles 25, 50, 75.
+ *
+ * @param {Object[]} markets — classified market objects
+ * @param {Object} histories — {tokenId: [{t, p}, ...]} sorted by t
+ * @returns {{times: Date[], p25: (string|null)[], p50: (string|null)[], p75: (string|null)[]}}
+ */
+function buildMedianTimeline(markets, histories) {
+  // Find the overall time range from all histories
+  let minTs = Infinity, maxTs = -Infinity;
+  for (const tid of Object.keys(histories)) {
+    for (const entry of histories[tid]) {
+      if (entry.t < minTs) minTs = entry.t;
+      if (entry.t > maxTs) maxTs = entry.t;
+    }
+  }
+
+  if (minTs === Infinity) {
+    return { times: [], p25: [], p50: [], p75: [] };
+  }
+
+  // Generate evenly-spaced hourly grid (forward-fills prices across gaps)
+  const HOUR = 3600;
+  const gridTimestamps = [];
+  for (let ts = minTs; ts <= maxTs; ts += HOUR) {
+    gridTimestamps.push(ts);
+  }
+
+  // Pre-sort each history for binary search
+  const sortedHistories = {};
+  for (const tid of Object.keys(histories)) {
+    sortedHistories[tid] = histories[tid].slice().sort((a, b) => a.t - b.t);
+  }
+
+  const times = [];
+  const p25Arr = [];
+  const p50Arr = [];
+  const p75Arr = [];
+
+  for (const ts of gridTimestamps) {
+    const asOfDate = new Date(ts * 1000);
+    const anchor = new Date(Date.UTC(
+      asOfDate.getUTCFullYear(), asOfDate.getUTCMonth(), asOfDate.getUTCDate()
+    ));
+
+    // Binary search for each market's price at this timestamp
+    const prices = {};
+    for (const m of markets) {
+      const tid = m.yesTokenId;
+      if (!tid || !sortedHistories[tid]) continue;
+      const hist = sortedHistories[tid];
+      if (hist.length === 0) continue;
+
+      // Binary search: find largest t <= ts
+      let lo = 0, hi = hist.length - 1, best = -1;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (hist[mid].t <= ts) {
+          best = mid;
+          lo = mid + 1;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      if (best >= 0) prices[tid] = hist[best].p;
+    }
+
+    if (Object.keys(prices).length === 0) continue;
+
+    const { dates, cdfValues } = buildCdfPoints(markets, prices, anchor);
+    if (dates.length < 2) continue;
+
+    const { fineDates, fineCdf } = interpolateCdf(dates, cdfValues);
+
+    const q25 = getPercentileDate(fineDates, fineCdf, 0.25);
+    const q50 = getPercentileDate(fineDates, fineCdf, 0.50);
+    const q75 = getPercentileDate(fineDates, fineCdf, 0.75);
+
+    // Fallback: when CDF doesn't reach a percentile, use end-of-year
+    const FALLBACK = "2026-12-31";
+    times.push(asOfDate);
+    p25Arr.push(q25 !== null ? ordinalToIso(q25) : null);
+    p50Arr.push(q50 !== null ? ordinalToIso(q50) : FALLBACK);
+    p75Arr.push(q75 !== null ? ordinalToIso(q75) : FALLBACK);
+  }
+
+  // Append one "live" point using current market prices
+  const { dates: liveDates, cdfValues: liveCdf } = buildCdfPoints(markets);
+  if (liveDates.length >= 2) {
+    const { fineDates: liveFd, fineCdf: liveFc } = interpolateCdf(liveDates, liveCdf);
+    const liveQ25 = getPercentileDate(liveFd, liveFc, 0.25);
+    const liveQ50 = getPercentileDate(liveFd, liveFc, 0.50);
+    const liveQ75 = getPercentileDate(liveFd, liveFc, 0.75);
+
+    const FALLBACK = "2026-12-31";
+    times.push(new Date());
+    p25Arr.push(liveQ25 !== null ? ordinalToIso(liveQ25) : null);
+    p50Arr.push(liveQ50 !== null ? ordinalToIso(liveQ50) : FALLBACK);
+    p75Arr.push(liveQ75 !== null ? ordinalToIso(liveQ75) : FALLBACK);
+  }
+
+  return { times, p25: p25Arr, p50: p50Arr, p75: p75Arr };
+}
+
+/**
  * Look up each market's price at a given historical time.
  * Returns {tokenId: price}.
  */

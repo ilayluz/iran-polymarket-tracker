@@ -357,6 +357,148 @@ function renderJoyPlot(markets, histories, distType, timeRange) {
   Plotly.react("main-chart", traces, layout, { displayModeBar: true, scrollZoom: true });
 }
 
+// ─── Median timeline chart ──────────────────────────────────────────────
+
+/**
+ * Render the median timeline chart showing how the predicted strike date
+ * (and 25th–75th percentile confidence band) evolved over time.
+ */
+function renderTimelineChart(markets, histories) {
+  const timeline = buildMedianTimeline(markets, histories);
+
+  if (timeline.times.length === 0) {
+    Plotly.react("timeline-chart", [], {
+      annotations: [{ text: "Not enough history for timeline", showarrow: false, font: { size: 14 } }],
+      xaxis: { visible: false }, yaxis: { visible: false },
+      plot_bgcolor: "white", height: 300,
+    });
+    return;
+  }
+
+  // Format snapshot timestamps as ISO strings for Plotly date axis
+  const xTimes = timeline.times.map(d => d.toISOString());
+
+  const traces = [];
+
+  // Confidence band fill (where both p25 and p75 exist)
+  const bandX = [];
+  const bandY = [];
+  for (let i = 0; i < xTimes.length; i++) {
+    if (timeline.p25[i] !== null && timeline.p75[i] !== null) {
+      bandX.push(xTimes[i]);
+      bandY.push(timeline.p75[i]);
+    }
+  }
+  const bandXRev = [];
+  const bandYRev = [];
+  for (let i = xTimes.length - 1; i >= 0; i--) {
+    if (timeline.p25[i] !== null && timeline.p75[i] !== null) {
+      bandXRev.push(xTimes[i]);
+      bandYRev.push(timeline.p25[i]);
+    }
+  }
+
+  if (bandX.length > 0) {
+    traces.push({
+      x: [...bandX, ...bandXRev],
+      y: [...bandY, ...bandYRev],
+      fill: "toself",
+      fillcolor: "rgba(31, 119, 180, 0.12)",
+      line: { color: "transparent" },
+      name: "25th–75th percentile",
+      showlegend: false,
+      hoverinfo: "skip",
+    });
+  }
+
+  // 25th percentile dashed line (visible even when p75 is null)
+  const p25X = [], p25Y = [];
+  for (let i = 0; i < xTimes.length; i++) {
+    if (timeline.p25[i] !== null) {
+      p25X.push(xTimes[i]);
+      p25Y.push(timeline.p25[i]);
+    }
+  }
+  if (p25X.length > 0) {
+    traces.push({
+      x: p25X, y: p25Y, mode: "lines",
+      name: "25th percentile",
+      line: { color: "rgba(31, 119, 180, 0.4)", width: 1, dash: "dot" },
+      hoverinfo: "skip",
+    });
+  }
+
+  // 75th percentile dashed line
+  const p75X = [], p75Y = [];
+  for (let i = 0; i < xTimes.length; i++) {
+    if (timeline.p75[i] !== null) {
+      p75X.push(xTimes[i]);
+      p75Y.push(timeline.p75[i]);
+    }
+  }
+  if (p75X.length > 0) {
+    traces.push({
+      x: p75X, y: p75Y, mode: "lines",
+      name: "75th percentile",
+      line: { color: "rgba(31, 119, 180, 0.4)", width: 1, dash: "dot" },
+      hoverinfo: "skip",
+    });
+  }
+
+  // Median line (p50)
+  const medX = [], medY = [], medCustom = [];
+  for (let i = 0; i < xTimes.length; i++) {
+    if (timeline.p50[i] !== null) {
+      medX.push(xTimes[i]);
+      medY.push(timeline.p50[i]);
+      medCustom.push({
+        p25: timeline.p25[i],
+        p50: timeline.p50[i],
+        p75: timeline.p75[i],
+      });
+    }
+  }
+
+  if (medX.length > 0) {
+    traces.push({
+      x: medX, y: medY, mode: "lines",
+      name: "Median (50th)",
+      line: { color: "#1f77b4", width: 2 },
+      customdata: medCustom,
+      hovertemplate: medCustom.map(d => {
+        const parts = [`Median: ${d.p50}`];
+        if (d.p25) parts.push(`25th: ${d.p25}`);
+        if (d.p75) parts.push(`75th: ${d.p75}`);
+        return parts.join("<br>") + "<extra></extra>";
+      }),
+    });
+  }
+
+  const layout = {
+    title: { text: "Predicted Strike Date Over Time", x: 0.5, font: { size: 15 } },
+    xaxis: {
+      title: "Snapshot Time",
+      type: "date",
+      gridcolor: "#eee",
+      gridwidth: 1,
+    },
+    yaxis: {
+      title: "Predicted Strike Date",
+      type: "date",
+      gridcolor: "#eee",
+      gridwidth: 1,
+    },
+    plot_bgcolor: "white",
+    hovermode: "x unified",
+    legend: { yanchor: "top", y: 0.99, xanchor: "left", x: 0.01 },
+    margin: { l: 80, r: 40, t: 50, b: 40 },
+    height: 300,
+    uirevision: "timeline-stable",
+  };
+
+  Plotly.react("timeline-chart", traces, layout, { displayModeBar: true, scrollZoom: true });
+}
+
 // ─── Market table ──────────────────────────────────────────────────────
 
 function renderMarketTable(markets, histories, sliderValue, timeRange) {

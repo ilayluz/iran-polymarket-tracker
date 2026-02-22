@@ -98,6 +98,10 @@ function render() {
     renderMainChart(markets, histories, distType, sliderValue);
   }
 
+  if (Object.keys(histories).length > 0) {
+    renderTimelineChart(markets, histories);
+  }
+
   renderMarketTable(markets, histories, sliderValue, timeRange);
 }
 

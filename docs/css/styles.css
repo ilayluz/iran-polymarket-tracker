@@ -136,6 +136,12 @@ h1 {
   margin-bottom: 10px;
 }
 
+/* Timeline chart */
+#timeline-chart {
+  height: 300px;
+  margin-bottom: 10px;
+}
+
 /* Market table */
 #market-table {
   margin-top: 20px;
