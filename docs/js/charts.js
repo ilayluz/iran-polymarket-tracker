@@ -4,6 +4,13 @@
  * Ports callbacks.py chart logic + joy_plot.py ridge plot.
  */
 
+// ─── HTML escaping ──────────────────────────────────────────────────────
+
+/** Escape HTML special characters to prevent XSS from API data. */
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 function todayDate() {
@@ -522,7 +529,7 @@ function renderMarketTable(markets, histories, sliderValue, timeRange) {
     const histPrices = getHistoricalPrices(markets, histories, asOf);
 
     if (Object.keys(histPrices).length > 0) {
-      html += `<h3>Markets at ${asOf.toISOString().replace("T", " ").slice(0, 19)} UTC</h3>`;
+      html += `<h3>Markets at ${escapeHtml(asOf.toISOString().replace("T", " ").slice(0, 19))} UTC</h3>`;
       html += buildTableHtml(markets, histPrices, asOf);
       html += "<hr>";
     }

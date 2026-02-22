@@ -13,6 +13,7 @@ Press Ctrl+C to stop.
 import http.server
 import json
 import os
+import re
 import socketserver
 import threading
 import time
@@ -126,6 +127,12 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
             self._proxy(upstream, MARKETS_TTL)
         elif parsed.path.startswith("/api/history/"):
             token_id = parsed.path.split("/api/history/", 1)[1]
+            if not re.match(r'^[a-zA-Z0-9_\-]+$', token_id):
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Invalid token ID"}).encode())
+                return
             upstream = f"{CLOB_API}/prices-history?market={token_id}&interval=max&fidelity=60"
             self._proxy(upstream, HISTORY_TTL)
         else:

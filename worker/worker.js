@@ -65,6 +65,9 @@ export default {
     const historyMatch = path.match(/^\/api\/history\/(.+)$/);
     if (historyMatch) {
       const tokenId = decodeURIComponent(historyMatch[1]);
+      if (!/^[a-zA-Z0-9_\-]+$/.test(tokenId)) {
+        return jsonResponse({ error: "Invalid token ID" }, 400);
+      }
       const upstream = `${CLOB_API}/prices-history?market=${encodeURIComponent(tokenId)}&interval=max&fidelity=60`;
       return fetchWithCache(request, upstream, 300);
     }

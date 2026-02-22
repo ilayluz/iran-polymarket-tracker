@@ -326,9 +326,12 @@ function buildMedianTimeline(markets, histories) {
   }
 
   // Generate evenly-spaced hourly grid (forward-fills prices across gaps)
+  // Cap at 10,000 points (~417 days) to prevent DoS from extreme timestamps
   const HOUR = 3600;
+  const MAX_GRID = 10000;
+  const step = Math.max(HOUR, Math.ceil((maxTs - minTs) / MAX_GRID));
   const gridTimestamps = [];
-  for (let ts = minTs; ts <= maxTs; ts += HOUR) {
+  for (let ts = minTs; ts <= maxTs; ts += step) {
     gridTimestamps.push(ts);
   }
 
