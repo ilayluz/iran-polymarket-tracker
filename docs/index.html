@@ -12,6 +12,11 @@
     <p class="subtitle">
       Based on <a href="https://polymarket.com/event/us-strikes-iran-by" target="_blank">Polymarket prediction markets</a>
     </p>
+    <p class="byline">
+      By <strong>Ilay Luz</strong> &middot;
+      Vibe-coded with <a href="https://claude.ai/claude-code" target="_blank">Claude Code</a> (Opus 4.6) &middot;
+      <a href="https://github.com/ilayluz/iran-polymarket-tracker" target="_blank">GitHub</a>
+    </p>
 
     <!-- Controls row -->
     <div class="controls">
@@ -19,10 +24,10 @@
         <span class="label">View:</span>
         <div class="radio-group">
           <label>
-            <input type="radio" name="dist-type" value="cdf" checked> Cumulative (CDF)
+            <input type="radio" name="dist-type" value="cdf" checked> Strike by date (cumulative)
           </label>
           <label>
-            <input type="radio" name="dist-type" value="pdf"> Density (PDF)
+            <input type="radio" name="dist-type" value="pdf"> Strike on date (density)
           </label>
         </div>
       </div>
@@ -53,6 +58,39 @@
 
     <!-- Market table -->
     <div id="market-table"></div>
+
+    <!-- Info section -->
+    <div class="info-section">
+      <h3>How to read this dashboard</h3>
+      <p>
+        This dashboard tracks what <strong>prediction markets</strong> say about the probability
+        of a US military strike on Iran. Prediction markets are platforms where people bet real money
+        on whether future events will happen. Because participants have money on the line, prices tend
+        to reflect genuine beliefs about probabilities &mdash; if a market is priced at 30%, that means
+        traders collectively estimate a 30% chance the event will occur.
+      </p>
+      <p>
+        The data comes from <a href="https://polymarket.com/event/us-strikes-iran-by" target="_blank">Polymarket</a>,
+        the largest prediction market platform. Polymarket runs individual markets like
+        "Will the US strike Iran by March 31?" &mdash; each priced between 0% and 100%.
+        This dashboard combines all those markets into a single probability curve showing
+        how likely a strike is by any given date.
+      </p>
+      <p>
+        <strong>"Strike by date"</strong> (the default view) shows the running total:
+        "What is the probability of a strike happening by this date or earlier?"
+        <strong>"Strike on date"</strong> shows the daily probability: "How likely is a strike
+        on this particular date?"
+      </p>
+      <p>
+        <strong>Important:</strong> Prediction markets are not crystal balls. They reflect the
+        crowd's best guess, which can be wrong. Markets can be swayed by low liquidity,
+        misinformation, or sudden news events. Treat these numbers as one signal among many,
+        not as ground truth. For a deeper explanation of how prediction markets work and their
+        limitations, see
+        <a href="https://www.astralcodexten.com/p/prediction-market-faq" target="_blank">Scott Alexander's Prediction Market FAQ</a>.
+      </p>
+    </div>
   </div>
 
   <!-- Loading overlay -->

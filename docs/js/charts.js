@@ -66,7 +66,7 @@ function buildMarkers(usedMarkets, fineDates, finePdf, distType, historicalPrice
         else break;
       }
       dates.push(isoDate(d));
-      yVals.push(finePdf[idx]);
+      yVals.push(finePdf[idx] * 100);
     }
 
     const vol = m.volume;
@@ -143,17 +143,17 @@ function renderMainChart(markets, histories, distType, sliderValue) {
 
   if (distType === "cdf") {
     traces.push({
-      x: xDates, y: Array.from(fineCdf), mode: "lines", name: "Interpolated CDF",
+      x: xDates, y: Array.from(fineCdf), mode: "lines", name: "Probability curve",
       line: { color: "#1f77b4", width: 2.5 },
-      hovertemplate: "Date: %{x}<br>P(strike by date): %{y:.1%}<extra></extra>",
+      hovertemplate: "Date: %{x}<br>Chance of strike by this date: %{y:.1%}<extra></extra>",
     });
   } else {
     traces.push({
-      x: xDates, y: Array.from(finePdf), mode: "lines", fill: "tozeroy",
-      name: "Probability Density",
+      x: xDates, y: Array.from(finePdf).map(v => v * 100), mode: "lines", fill: "tozeroy",
+      name: "Daily probability",
       line: { color: "#1f77b4", width: 2 },
       fillcolor: "rgba(31, 119, 180, 0.15)",
-      hovertemplate: "Date: %{x}<br>Density: %{y:.4f}/day<extra></extra>",
+      hovertemplate: "Date: %{x}<br>Likelihood: %{y:.2f}%/day<extra></extra>",
     });
   }
 
@@ -170,8 +170,9 @@ function renderMainChart(markets, histories, distType, sliderValue) {
       gridcolor: "#eee", gridwidth: 1,
     },
     yaxis: {
-      title: distType === "cdf" ? "Cumulative Probability" : "Probability Density (per day)",
+      title: distType === "cdf" ? "Chance of strike by this date" : "Daily strike likelihood (%/day)",
       tickformat: distType === "cdf" ? ".0%" : undefined,
+      ticksuffix: distType === "cdf" ? undefined : "%",
       rangemode: "tozero",
       gridcolor: "#eee", gridwidth: 1,
     },
@@ -303,13 +304,13 @@ function renderJoyPlot(markets, histories, distType, timeRange) {
     });
 
     // Top-edge trace with hover
-    const hoverLabel = distType === "pdf" ? "Density: %{customdata:.4f}/day" : "P(strike by date): %{customdata:.1%}";
+    const hoverLabel = distType === "pdf" ? "Likelihood: %{customdata:.2f}%/day" : "Chance of strike by date: %{customdata:.1%}";
     traces.push({
       x: xDates, y: yCurve, mode: "lines",
       line: { color: lineColor, width: 0.8 },
       showlegend: false,
       hovertemplate: `<b>${formatDate(ts)}</b><br>Date: %{x}<br>${hoverLabel}<extra></extra>`,
-      customdata: Array.from(yVals),
+      customdata: distType === "pdf" ? Array.from(yVals).map(v => v * 100) : Array.from(yVals),
     });
   }
 
@@ -331,7 +332,7 @@ function renderJoyPlot(markets, histories, distType, timeRange) {
   }
 
   const defaultEnd = addDays(today, 60);
-  const viewLabel = distType === "pdf" ? "Probability Density" : "Cumulative Probability";
+  const viewLabel = distType === "pdf" ? "Daily Strike Likelihood" : "Strike Probability by Date";
   const layout = {
     title: { text: `Ridge Plot: ${viewLabel} Over Time`, x: 0.5, font: { size: 15 } },
     xaxis: {
