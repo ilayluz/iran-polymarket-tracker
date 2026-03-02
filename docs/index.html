@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>US-Iran Strike Probability Dashboard</title>
+  <title>US-Iran Ceasefire Probability Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="container">
-    <h1>US-Iran Strike Probability Dashboard</h1>
+    <h1>US-Iran Ceasefire Probability Dashboard</h1>
     <p class="subtitle">
-      Based on <a href="https://polymarket.com/event/us-strikes-iran-by" target="_blank">Polymarket prediction markets</a>
+      Based on <a href="https://polymarket.com/event/us-x-iran-ceasefire-by" target="_blank">Polymarket prediction markets</a>
     </p>
     <p class="byline">
       By <strong>Ilay Luz</strong> &middot;
@@ -24,10 +24,10 @@
         <span class="label">View:</span>
         <div class="radio-group">
           <label>
-            <input type="radio" name="dist-type" value="cdf" checked> Strike by date (cumulative)
+            <input type="radio" name="dist-type" value="cdf" checked> Ceasefire by date (cumulative)
           </label>
           <label>
-            <input type="radio" name="dist-type" value="pdf"> Strike on date (density)
+            <input type="radio" name="dist-type" value="pdf"> Ceasefire on date (density)
           </label>
         </div>
       </div>
@@ -64,22 +64,22 @@
       <h3>How to read this dashboard</h3>
       <p>
         This dashboard tracks what <strong>prediction markets</strong> say about the probability
-        of a US military strike on Iran. Prediction markets are platforms where people bet real money
+        of a US-Iran ceasefire. Prediction markets are platforms where people bet real money
         on whether future events will happen. Because participants have money on the line, prices tend
         to reflect genuine beliefs about probabilities &mdash; if a market is priced at 30%, that means
         traders collectively estimate a 30% chance the event will occur.
       </p>
       <p>
-        The data comes from <a href="https://polymarket.com/event/us-strikes-iran-by" target="_blank">Polymarket</a>,
+        The data comes from <a href="https://polymarket.com/event/us-x-iran-ceasefire-by" target="_blank">Polymarket</a>,
         the largest prediction market platform. Polymarket runs individual markets like
-        "Will the US strike Iran by March 31?" &mdash; each priced between 0% and 100%.
+        "Will there be a US-Iran ceasefire by March 31?" &mdash; each priced between 0% and 100%.
         This dashboard combines all those markets into a single probability curve showing
-        how likely a strike is by any given date.
+        how likely a ceasefire is by any given date.
       </p>
       <p>
-        <strong>"Strike by date"</strong> (the default view) shows the running total:
-        "What is the probability of a strike happening by this date or earlier?"
-        <strong>"Strike on date"</strong> shows the daily probability: "How likely is a strike
+        <strong>"Ceasefire by date"</strong> (the default view) shows the running total:
+        "What is the probability of a ceasefire happening by this date or earlier?"
+        <strong>"Ceasefire on date"</strong> shows the daily probability: "How likely is a ceasefire
         on this particular date?"
       </p>
       <p>

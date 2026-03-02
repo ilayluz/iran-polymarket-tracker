@@ -25,7 +25,7 @@ import requests as req_lib
 
 GAMMA_API = "https://gamma-api.polymarket.com"
 CLOB_API = "https://clob.polymarket.com"
-EVENT_SLUG = "us-strikes-iran-by"
+EVENT_SLUG = "us-x-iran-ceasefire-by"
 DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
 PORT = 8000
 

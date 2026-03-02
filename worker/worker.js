@@ -2,13 +2,13 @@
  * Cloudflare Worker: caching proxy for Polymarket APIs.
  *
  * Endpoints:
- *   GET /api/markets      → gamma-api.polymarket.com/events?slug=us-strikes-iran-by  (60s cache)
- *   GET /api/history/:tid → clob.polymarket.com/prices-history?market={tid}           (300s cache)
+ *   GET /api/markets      → gamma-api.polymarket.com/events?slug=us-x-iran-ceasefire-by  (60s cache)
+ *   GET /api/history/:tid → clob.polymarket.com/prices-history?market={tid}              (300s cache)
  */
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
 const CLOB_API = "https://clob.polymarket.com";
-const EVENT_SLUG = "us-strikes-iran-by";
+const EVENT_SLUG = "us-x-iran-ceasefire-by";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",

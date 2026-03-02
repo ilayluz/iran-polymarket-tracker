@@ -3,8 +3,8 @@
 
 ## Polymarket API Notes
 
-* Polymarket does NOT support deep-linking to individual submarkets within a grouped event. URLs like `polymarket.com/event/{event-slug}/{market-slug}` and query params like `?market={id}` or `?tid={token_id}` all just load the parent event page. The only usable link is to the parent event: `https://polymarket.com/event/us-strikes-iran-by`
-* Gamma API (`gamma-api.polymarket.com`): market metadata, no auth needed. Use `GET /events?slug=us-strikes-iran-by` to get all submarkets.
+* Polymarket does NOT support deep-linking to individual submarkets within a grouped event. URLs like `polymarket.com/event/{event-slug}/{market-slug}` and query params like `?market={id}` or `?tid={token_id}` all just load the parent event page. The only usable link is to the parent event: `https://polymarket.com/event/us-x-iran-ceasefire-by`
+* Gamma API (`gamma-api.polymarket.com`): market metadata, no auth needed. Use `GET /events?slug=us-x-iran-ceasefire-by` to get all submarkets.
 * CLOB API (`clob.polymarket.com`): price history, no auth needed. Use `GET /prices-history?market={token_id}&interval=max&fidelity=60` for historical data.
 * `outcomePrices` and `clobTokenIds` are JSON-encoded strings in the API response — must `json.loads()` them.
 * The `endDate` field on a market does NOT always match the question deadline date. Parse the actual date from the question text instead.

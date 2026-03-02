@@ -152,7 +152,7 @@ function renderMainChart(markets, histories, distType, sliderValue) {
     traces.push({
       x: xDates, y: Array.from(fineCdf), mode: "lines", name: "Probability curve",
       line: { color: "#1f77b4", width: 2.5 },
-      hovertemplate: "Date: %{x}<br>Chance of strike by this date: %{y:.1%}<extra></extra>",
+      hovertemplate: "Date: %{x}<br>Chance of ceasefire by this date: %{y:.1%}<extra></extra>",
     });
   } else {
     traces.push({
@@ -170,14 +170,14 @@ function renderMainChart(markets, histories, distType, sliderValue) {
 
   const defaultEnd = addDays(today, 60);
   const layout = {
-    title: { text: `US-Iran Strike Probability \u2014 ${titleSuffix}`, x: 0.5 },
+    title: { text: `US-Iran Ceasefire Probability \u2014 ${titleSuffix}`, x: 0.5 },
     xaxis: {
       title: "Date",
       range: [isoDate(today), isoDate(defaultEnd)],
       gridcolor: "#eee", gridwidth: 1,
     },
     yaxis: {
-      title: distType === "cdf" ? "Chance of strike by this date" : "Daily strike likelihood (%/day)",
+      title: distType === "cdf" ? "Chance of ceasefire by this date" : "Daily ceasefire likelihood (%/day)",
       tickformat: distType === "cdf" ? ".0%" : undefined,
       ticksuffix: distType === "cdf" ? undefined : "%",
       rangemode: "tozero",
@@ -311,7 +311,7 @@ function renderJoyPlot(markets, histories, distType, timeRange) {
     });
 
     // Top-edge trace with hover
-    const hoverLabel = distType === "pdf" ? "Likelihood: %{customdata:.2f}%/day" : "Chance of strike by date: %{customdata:.1%}";
+    const hoverLabel = distType === "pdf" ? "Likelihood: %{customdata:.2f}%/day" : "Chance of ceasefire by date: %{customdata:.1%}";
     traces.push({
       x: xDates, y: yCurve, mode: "lines",
       line: { color: lineColor, width: 0.8 },
@@ -339,7 +339,7 @@ function renderJoyPlot(markets, histories, distType, timeRange) {
   }
 
   const defaultEnd = addDays(today, 60);
-  const viewLabel = distType === "pdf" ? "Daily Strike Likelihood" : "Strike Probability by Date";
+  const viewLabel = distType === "pdf" ? "Daily Ceasefire Likelihood" : "Ceasefire Probability by Date";
   const layout = {
     title: { text: `Ridge Plot: ${viewLabel} Over Time`, x: 0.5, font: { size: 15 } },
     xaxis: {
@@ -368,7 +368,7 @@ function renderJoyPlot(markets, histories, distType, timeRange) {
 // ─── Median timeline chart ──────────────────────────────────────────────
 
 /**
- * Render the median timeline chart showing how the predicted strike date
+ * Render the median timeline chart showing how the predicted ceasefire date
  * (and 25th–75th percentile confidence band) evolved over time.
  */
 function renderTimelineChart(markets, histories) {
@@ -483,7 +483,7 @@ function renderTimelineChart(markets, histories) {
   }
 
   const layout = {
-    title: { text: "Predicted Strike Date Over Time", x: 0.5, font: { size: 15 } },
+    title: { text: "Predicted Ceasefire Date Over Time", x: 0.5, font: { size: 15 } },
     xaxis: {
       title: "Snapshot Time",
       type: "date",
@@ -491,7 +491,7 @@ function renderTimelineChart(markets, histories) {
       gridwidth: 1,
     },
     yaxis: {
-      title: "Predicted Strike Date",
+      title: "Predicted Ceasefire Date",
       type: "date",
       gridcolor: "#eee",
       gridwidth: 1,
