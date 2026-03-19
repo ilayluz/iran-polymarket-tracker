@@ -3,20 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>US-Iran Ceasefire Probability Dashboard</title>
+  <title>When will the Iran war end?</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="container">
-    <h1>US-Iran Ceasefire Probability Dashboard</h1>
+    <h1>When will the Iran war end?<a href="#" class="asterisk" id="asterisk-toggle">*</a></h1>
+    <p class="asterisk-detail hidden" id="asterisk-detail">
+      *Start of continuous 14-day period without any qualifying military action
+      between Iran, and Israel and the United States.
+      <a href="https://polymarket.com/event/iran-x-israelus-conflict-ends-by" target="_blank">See market for precise conditions.</a>
+    </p>
     <p class="subtitle">
-      Based on <a href="https://polymarket.com/event/us-x-iran-ceasefire-by" target="_blank">Polymarket prediction markets</a>
+      Based on <a href="https://polymarket.com/event/iran-x-israelus-conflict-ends-by" target="_blank">Polymarket prediction markets</a>
     </p>
     <p class="byline">
       By <strong>Ilay Luz</strong> &middot;
-      Vibe-coded with <a href="https://claude.ai/claude-code" target="_blank">Claude Code</a> (Opus 4.6) &middot;
+      Vibe-coded with Claude Code (Opus 4.6) &middot;
       <a href="https://github.com/ilayluz/iran-polymarket-tracker" target="_blank">GitHub</a>
     </p>
+
+    <!-- Key statistics -->
+    <div class="stats-section" id="stats-section">
+      <div class="stat-primary">
+        <div class="stat-number"><span id="stat-days">--</span> days from now</div>
+        <div class="stat-label">median prediction</div>
+      </div>
+      <div class="stat-secondary">
+        <div class="stat-item">
+          <div class="stat-item-value" id="stat-p25">--</div>
+          <div class="stat-item-label">25th percentile</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-item-value" id="stat-p50">--</div>
+          <div class="stat-item-label">Median</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-item-value" id="stat-p75">--</div>
+          <div class="stat-item-label">75th percentile</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Controls row -->
     <div class="controls">
@@ -24,18 +51,12 @@
         <span class="label">View:</span>
         <div class="radio-group">
           <label>
-            <input type="radio" name="dist-type" value="cdf" checked> Ceasefire by date (cumulative)
+            <input type="radio" name="dist-type" value="cdf" checked> End by date (cumulative)
           </label>
           <label>
-            <input type="radio" name="dist-type" value="pdf"> Ceasefire on date (density)
+            <input type="radio" name="dist-type" value="pdf"> End on date (density)
           </label>
         </div>
-      </div>
-
-      <div class="control-group">
-        <label>
-          <input type="checkbox" id="joy-toggle"> Ridge Plot (historical overlay)
-        </label>
       </div>
 
       <button class="update-btn" id="update-btn">Update</button>
@@ -63,24 +84,32 @@
     <div class="info-section">
       <h3>How to read this dashboard</h3>
       <p>
-        This dashboard tracks what <strong>prediction markets</strong> say about the probability
-        of a US-Iran ceasefire. Prediction markets are platforms where people bet real money
+        This dashboard tracks what <strong>prediction markets</strong> say about when the
+        Iran&ndash;Israel/US conflict will end. Prediction markets are platforms where people bet real money
         on whether future events will happen. Because participants have money on the line, prices tend
         to reflect genuine beliefs about probabilities &mdash; if a market is priced at 30%, that means
         traders collectively estimate a 30% chance the event will occur.
       </p>
       <p>
-        The data comes from <a href="https://polymarket.com/event/us-x-iran-ceasefire-by" target="_blank">Polymarket</a>,
+        The data comes from <a href="https://polymarket.com/event/iran-x-israelus-conflict-ends-by" target="_blank">Polymarket</a>,
         the largest prediction market platform. Polymarket runs individual markets like
-        "Will there be a US-Iran ceasefire by March 31?" &mdash; each priced between 0% and 100%.
+        "Will the conflict end by March 31?" &mdash; each priced between 0% and 100%.
         This dashboard combines all those markets into a single probability curve showing
-        how likely a ceasefire is by any given date.
+        how likely the conflict is to end by any given date.
       </p>
       <p>
-        <strong>"Ceasefire by date"</strong> (the default view) shows the running total:
-        "What is the probability of a ceasefire happening by this date or earlier?"
-        <strong>"Ceasefire on date"</strong> shows the daily probability: "How likely is a ceasefire
-        on this particular date?"
+        <strong>"End by date"</strong> (the default view) shows the running total:
+        "What is the probability of the conflict ending by this date or earlier?"
+        <strong>"End on date"</strong> shows the daily probability: "How likely is the conflict
+        to end on this particular date?"
+      </p>
+      <p>
+        <strong>How the curve is built:</strong> Each Polymarket deadline market gives one data point
+        (e.g. "30% chance by March 31"). The dashboard fits a smooth curve through these points using
+        <a href="https://en.wikipedia.org/wiki/Monotone_cubic_interpolation" target="_blank">PCHIP interpolation</a>
+        (Piecewise Cubic Hermite Interpolating Polynomial), which preserves the monotonically increasing
+        shape that a cumulative probability curve must have. The daily probability view is the derivative
+        of this curve, computed via central differences.
       </p>
       <p>
         <strong>Important:</strong> Prediction markets are not crystal balls. They reflect the

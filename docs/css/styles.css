@@ -21,7 +21,87 @@ body {
 h1 {
   text-align: center;
   margin-bottom: 5px;
-  font-size: 1.6em;
+  font-size: 2.2em;
+}
+
+.asterisk {
+  color: #1f77b4;
+  text-decoration: none;
+  font-size: 0.75em;
+  vertical-align: super;
+  margin-left: 2px;
+}
+.asterisk:hover {
+  text-decoration: underline;
+}
+
+.asterisk-detail {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin-bottom: 8px;
+  line-height: 1.5;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.asterisk-detail a {
+  color: #1f77b4;
+  text-decoration: none;
+}
+.asterisk-detail a:hover {
+  text-decoration: underline;
+}
+.asterisk-detail.hidden {
+  display: none;
+}
+
+/* Key statistics */
+.stats-section {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.stat-primary {
+  margin-bottom: 12px;
+}
+
+.stat-number {
+  font-size: 3.5em;
+  font-weight: 700;
+  color: #1f77b4;
+  line-height: 1.1;
+}
+
+.stat-label {
+  font-size: 0.95em;
+  color: #666;
+  margin-top: 4px;
+}
+
+.stat-secondary {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-item-value {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #444;
+}
+
+.stat-item-label {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 2px;
 }
 
 .subtitle {

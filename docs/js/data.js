@@ -305,19 +305,46 @@ function getPercentileDate(fineDates, fineCdf, percentile) {
 
 /**
  * Build the median timeline: for each historical timestamp, compute the
- * predicted strike date at percentiles 25, 50, 75.
+ * predicted end date at percentiles 25, 50, 75.
+ *
+ * Starts only after the farthest-deadline market has history data, so that
+ * new markets extending the CDF range don't cause misleading spikes.
  *
  * @param {Object[]} markets — classified market objects
  * @param {Object} histories — {tokenId: [{t, p}, ...]} sorted by t
  * @returns {{times: Date[], p25: (string|null)[], p50: (string|null)[], p75: (string|null)[]}}
  */
 function buildMedianTimeline(markets, histories) {
-  // Find the overall time range from all histories
+  // Find the farthest-deadline market and use its history start as timeline start.
+  // This avoids spikes when new far-future markets are added mid-stream.
+  let farthestMarket = null;
+  for (const m of markets) {
+    if (!farthestMarket || m.deadlineDate > farthestMarket.deadlineDate) {
+      farthestMarket = m;
+    }
+  }
+
   let minTs = Infinity, maxTs = -Infinity;
   for (const tid of Object.keys(histories)) {
     for (const entry of histories[tid]) {
-      if (entry.t < minTs) minTs = entry.t;
       if (entry.t > maxTs) maxTs = entry.t;
+    }
+  }
+
+  // Start timeline from when the farthest-deadline market has data
+  if (farthestMarket && farthestMarket.yesTokenId && histories[farthestMarket.yesTokenId]) {
+    const hist = histories[farthestMarket.yesTokenId];
+    for (const entry of hist) {
+      if (entry.t < minTs) minTs = entry.t;
+    }
+  }
+
+  // Fallback: use overall min if farthest market has no history
+  if (minTs === Infinity) {
+    for (const tid of Object.keys(histories)) {
+      for (const entry of histories[tid]) {
+        if (entry.t < minTs) minTs = entry.t;
+      }
     }
   }
 

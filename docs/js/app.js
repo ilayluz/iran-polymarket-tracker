@@ -11,7 +11,6 @@ const state = {
   histories: {},
   timeRange: null,      // {min: Date, max: Date}
   distType: "cdf",
-  joyEnabled: false,
   sliderValue: 100,
   loading: false,
 };
@@ -85,18 +84,15 @@ function updateSliderMarks() {
 // ─── Render ────────────────────────────────────────────────────────────
 
 function render() {
-  const { markets, histories, distType, joyEnabled, sliderValue, timeRange } = state;
+  const { markets, histories, distType, sliderValue, timeRange } = state;
 
   if (!markets || markets.length === 0) {
     renderEmptyChart("Loading data from Polymarket...");
     return;
   }
 
-  if (joyEnabled && timeRange) {
-    renderJoyPlot(markets, histories, distType, timeRange);
-  } else {
-    renderMainChart(markets, histories, distType, sliderValue);
-  }
+  renderStats(markets);
+  renderMainChart(markets, histories, distType, sliderValue);
 
   if (Object.keys(histories).length > 0) {
     renderTimelineChart(markets, histories);
@@ -116,12 +112,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Checkbox: ridge plot toggle
-  document.getElementById("joy-toggle").addEventListener("change", (e) => {
-    state.joyEnabled = e.target.checked;
-    render();
-  });
-
   // Range slider: historical snapshot
   document.getElementById("time-slider").addEventListener("input", (e) => {
     state.sliderValue = parseInt(e.target.value, 10);
@@ -131,6 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Update button
   document.getElementById("update-btn").addEventListener("click", () => {
     fetchAndUpdate();
+  });
+
+  // Asterisk toggle
+  document.getElementById("asterisk-toggle").addEventListener("click", (e) => {
+    e.preventDefault();
+    document.getElementById("asterisk-detail").classList.toggle("hidden");
   });
 
   // Initial load

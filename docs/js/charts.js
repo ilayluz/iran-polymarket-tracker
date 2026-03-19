@@ -1,7 +1,7 @@
 /**
  * Chart rendering with Plotly.js.
  *
- * Ports callbacks.py chart logic + joy_plot.py ridge plot.
+ * Ports callbacks.py chart logic.
  */
 
 // ─── HTML escaping ──────────────────────────────────────────────────────
@@ -43,6 +43,35 @@ function zoomButtons(today) {
     { label: "All", method: "relayout",
       args: [{ "xaxis.autorange": true }] },
   ];
+}
+
+// ─── Key statistics ─────────────────────────────────────────────────────
+
+function renderStats(markets) {
+  const cdf = buildCdfPoints(markets);
+  if (cdf.dates.length < 2) return;
+
+  const { fineDates, fineCdf } = interpolateCdf(cdf.dates, cdf.cdfValues);
+  const today = todayDate();
+  const todayOrd = dateToOrdinal(today);
+
+  const q25 = getPercentileDate(fineDates, fineCdf, 0.25);
+  const q50 = getPercentileDate(fineDates, fineCdf, 0.50);
+  const q75 = getPercentileDate(fineDates, fineCdf, 0.75);
+
+  if (q50 !== null) {
+    const daysFromNow = Math.round(q50 - todayOrd);
+    document.getElementById("stat-days").textContent = daysFromNow;
+    document.getElementById("stat-p50").textContent = formatDate(ordinalToDate(q50));
+  } else {
+    document.getElementById("stat-days").textContent = ">1yr";
+    document.getElementById("stat-p50").textContent = "Beyond market range";
+  }
+
+  document.getElementById("stat-p25").textContent =
+    q25 !== null ? formatDate(ordinalToDate(q25)) : "N/A";
+  document.getElementById("stat-p75").textContent =
+    q75 !== null ? formatDate(ordinalToDate(q75)) : "Beyond market range";
 }
 
 // ─── Marker construction ───────────────────────────────────────────────
@@ -152,7 +181,7 @@ function renderMainChart(markets, histories, distType, sliderValue) {
     traces.push({
       x: xDates, y: Array.from(fineCdf), mode: "lines", name: "Probability curve",
       line: { color: "#1f77b4", width: 2.5 },
-      hovertemplate: "Date: %{x}<br>Chance of ceasefire by this date: %{y:.1%}<extra></extra>",
+      hovertemplate: "Date: %{x}<br>Chance of conflict ending by this date: %{y:.1%}<extra></extra>",
     });
   } else {
     traces.push({
@@ -170,14 +199,14 @@ function renderMainChart(markets, histories, distType, sliderValue) {
 
   const defaultEnd = addDays(today, 60);
   const layout = {
-    title: { text: `US-Iran Ceasefire Probability \u2014 ${titleSuffix}`, x: 0.5 },
+    title: { text: `Conflict End Probability \u2014 ${titleSuffix}`, x: 0.5 },
     xaxis: {
       title: "Date",
       range: [isoDate(today), isoDate(defaultEnd)],
       gridcolor: "#eee", gridwidth: 1,
     },
     yaxis: {
-      title: distType === "cdf" ? "Chance of ceasefire by this date" : "Daily ceasefire likelihood (%/day)",
+      title: distType === "cdf" ? "Chance of conflict ending by this date" : "Daily likelihood of conflict ending (%/day)",
       tickformat: distType === "cdf" ? ".0%" : undefined,
       ticksuffix: distType === "cdf" ? undefined : "%",
       rangemode: "tozero",
@@ -210,165 +239,10 @@ function renderMainChart(markets, histories, distType, sliderValue) {
   Plotly.react("main-chart", traces, layout, { displayModeBar: true, scrollZoom: true });
 }
 
-// ─── Ridge / Joy plot ──────────────────────────────────────────────────
-
-function renderJoyPlot(markets, histories, distType, timeRange) {
-  const today = todayDate();
-  const nSnapshots = 30;
-  const timeMin = timeRange.min;
-  const timeMax = timeRange.max;
-  const totalMs = timeMax.getTime() - timeMin.getTime();
-
-  if (totalMs <= 0) {
-    renderEmptyChart("Not enough time range for ridge plot");
-    return;
-  }
-
-  // Generate snapshot timestamps
-  const timestamps = [];
-  for (let i = 0; i < nSnapshots; i++) {
-    timestamps.push(new Date(timeMin.getTime() + (totalMs * i) / (nSnapshots - 1)));
-  }
-
-  // Build curves
-  const curves = [];
-  for (const ts of timestamps) {
-    const snap = buildSnapshot(markets, histories, ts);
-    if (!snap || snap.fineDates.length < 2) continue;
-    const yData = distType === "pdf" ? snap.finePdf : snap.fineCdf;
-    curves.push({ ts, fineDates: snap.fineDates, y: yData });
-  }
-
-  if (curves.length === 0) {
-    renderEmptyChart("Not enough historical data for ridge plot");
-    return;
-  }
-
-  const xStartOrd = dateToOrdinal(today);
-
-  // Clip to dates from today onward
-  const clipped = [];
-  for (const c of curves) {
-    const indices = [];
-    for (let i = 0; i < c.fineDates.length; i++) {
-      if (c.fineDates[i] >= xStartOrd) indices.push(i);
-    }
-    if (indices.length === 0) continue;
-    const fd = new Float64Array(indices.length);
-    const yv = new Float64Array(indices.length);
-    for (let j = 0; j < indices.length; j++) {
-      fd[j] = c.fineDates[indices[j]];
-      yv[j] = c.y[indices[j]];
-    }
-    clipped.push({ ts: c.ts, fineDates: fd, y: yv });
-  }
-
-  if (clipped.length === 0) {
-    renderEmptyChart("Not enough data in the visible range");
-    return;
-  }
-
-  // Global normalization
-  let globalMax = 0;
-  for (const c of clipped) {
-    for (let i = 0; i < c.y.length; i++) {
-      if (c.y[i] > globalMax) globalMax = c.y[i];
-    }
-  }
-  if (globalMax === 0) globalMax = 1;
-
-  const n = clipped.length;
-  const offsetStep = 0.12;
-  const scale = 1.5;
-
-  const traces = [];
-
-  // Draw oldest first (highest offset) → newest last (on top)
-  for (let i = 0; i < n; i++) {
-    const { ts, fineDates: fd, y: yVals } = clipped[i];
-    const xDates = Array.from(fd).map(ordinalToIso);
-    const offset = (n - 1 - i) * offsetStep;
-
-    // Scale + offset
-    const yCurve = Array.from(yVals).map(v => (v / globalMax) * scale + offset);
-
-    // Color gradient: peach (oldest) → coral (newest)
-    const t = i / Math.max(n - 1, 1);
-    const r = Math.round(245 + 10 * t);
-    const g = Math.round(190 - 100 * t);
-    const b = Math.round(160 - 100 * t);
-    const fillColor = `rgba(${r}, ${g}, ${b}, 0.92)`;
-    const lineColor = "rgba(255, 255, 255, 0.7)";
-
-    // Fill polygon: curve left→right, baseline right→left
-    const xFull = [...xDates, ...xDates.slice().reverse()];
-    const yFull = [...yCurve, ...new Array(xDates.length).fill(offset)];
-
-    traces.push({
-      x: xFull, y: yFull, fill: "toself", fillcolor: fillColor,
-      line: { color: lineColor, width: 0.8 },
-      showlegend: false, hoverinfo: "skip",
-    });
-
-    // Top-edge trace with hover
-    const hoverLabel = distType === "pdf" ? "Likelihood: %{customdata:.2f}%/day" : "Chance of ceasefire by date: %{customdata:.1%}";
-    traces.push({
-      x: xDates, y: yCurve, mode: "lines",
-      line: { color: lineColor, width: 0.8 },
-      showlegend: false,
-      hovertemplate: `<b>${formatDate(ts)}</b><br>Date: %{x}<br>${hoverLabel}<extra></extra>`,
-      customdata: distType === "pdf" ? Array.from(yVals).map(v => v * 100) : Array.from(yVals),
-    });
-  }
-
-  // Date labels on right side
-  const rightmostDate = ordinalToIso(clipped[n - 1].fineDates[clipped[n - 1].fineDates.length - 1]);
-  const labelEvery = Math.max(1, Math.floor(n / 8));
-  const annotations = [];
-  for (let i = 0; i < n; i++) {
-    if (i % labelEvery !== 0 && i !== n - 1) continue;
-    const offset = (n - 1 - i) * offsetStep;
-    const ts = clipped[i].ts;
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    annotations.push({
-      x: rightmostDate, y: offset,
-      text: `${months[ts.getUTCMonth()]} ${ts.getUTCDate()}`,
-      showarrow: false, xanchor: "left", yanchor: "middle",
-      font: { size: 9, color: "#666" }, xshift: 8,
-    });
-  }
-
-  const defaultEnd = addDays(today, 60);
-  const viewLabel = distType === "pdf" ? "Daily Ceasefire Likelihood" : "Ceasefire Probability by Date";
-  const layout = {
-    title: { text: `Ridge Plot: ${viewLabel} Over Time`, x: 0.5, font: { size: 15 } },
-    xaxis: {
-      title: "Date",
-      range: [isoDate(today), isoDate(defaultEnd)],
-      gridcolor: "#eee",
-    },
-    yaxis: { showticklabels: false, showgrid: false, zeroline: false },
-    updatemenus: [{
-      type: "buttons", direction: "right",
-      x: 1.0, xanchor: "right", y: 1.15, yanchor: "top",
-      buttons: zoomButtons(today), showactive: true, active: 1,
-      bgcolor: "white", bordercolor: "#ccc", font: { size: 11 },
-    }],
-    annotations,
-    plot_bgcolor: "white",
-    hovermode: "closest",
-    showlegend: false,
-    margin: { l: 40, r: 80, t: 80, b: 50 },
-    uirevision: "stable",
-  };
-
-  Plotly.react("main-chart", traces, layout, { displayModeBar: true, scrollZoom: true });
-}
-
 // ─── Median timeline chart ──────────────────────────────────────────────
 
 /**
- * Render the median timeline chart showing how the predicted ceasefire date
+ * Render the median timeline chart showing how the predicted end date
  * (and 25th–75th percentile confidence band) evolved over time.
  */
 function renderTimelineChart(markets, histories) {
@@ -413,7 +287,7 @@ function renderTimelineChart(markets, histories) {
       fill: "toself",
       fillcolor: "rgba(31, 119, 180, 0.12)",
       line: { color: "transparent" },
-      name: "25th–75th percentile",
+      name: "25th\u201375th percentile",
       showlegend: false,
       hoverinfo: "skip",
     });
@@ -482,8 +356,21 @@ function renderTimelineChart(markets, histories) {
     });
   }
 
+  // Compute y-axis range from actual data (p25 min to p75 max) with padding
+  const allYDates = [];
+  for (const arr of [p25Y, medY, p75Y]) {
+    for (const d of arr) allYDates.push(new Date(d).getTime());
+  }
+  let yRange;
+  if (allYDates.length > 0) {
+    const yMin = Math.min(...allYDates);
+    const yMax = Math.max(...allYDates);
+    const pad = (yMax - yMin) * 0.1 || 7 * 86400000;
+    yRange = [new Date(yMin - pad).toISOString(), new Date(yMax + pad).toISOString()];
+  }
+
   const layout = {
-    title: { text: "Predicted Ceasefire Date Over Time", x: 0.5, font: { size: 15 } },
+    title: { text: "Predicted End Date Over Time", x: 0.5, font: { size: 15 } },
     xaxis: {
       title: "Snapshot Time",
       type: "date",
@@ -491,10 +378,11 @@ function renderTimelineChart(markets, histories) {
       gridwidth: 1,
     },
     yaxis: {
-      title: "Predicted Ceasefire Date",
+      title: "Predicted End Date",
       type: "date",
       gridcolor: "#eee",
       gridwidth: 1,
+      range: yRange,
     },
     plot_bgcolor: "white",
     hovermode: "x unified",
