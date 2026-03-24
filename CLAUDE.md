@@ -11,50 +11,42 @@
 * Plotly 6.x `add_vline()` with `annotation_text` crashes when x is an ISO date string (TypeError in `shapeannotation.py`). Use `add_shape()` + `add_annotation()` separately instead.
 * Polymarket API rate limits (from docs): Gamma /events 4,000 req/10s, Gamma /markets 300 req/10s, CLOB general 1,500-9,000 req/10s. Very generous for read-only use, but we still want to minimize calls when serving thousands of users.
 
-## Deployment Architecture Analysis
+## Low-Volume Market Filtering
 
-The current app is Dash (server-side Python/Flask). **Dash CANNOT be deployed to GitHub Pages** since it requires a running Python process. This is the fundamental constraint.
+New Polymarket markets open with ~$0 volume and a default 50% price, which is noise — not a real probability signal. Including them in the CDF interpolation causes the probability curve and median prediction to jump dramatically (e.g. the median suddenly drops by months when a new far-future market appears at 50%).
 
-### Recommended: Option C — Static Site + Cloudflare Workers Cache Proxy
+Two defenses in `data.js`, controlled by constants in `config.js`:
 
-* Rewrite frontend to static HTML + Plotly.js (Plotly.js is the same charting library Dash uses under the hood — charts translate directly, main work is replacing Dash callbacks with vanilla JS event handlers)
-* Deploy static site to GitHub Pages (free, scales to millions of users)
-* Deploy a tiny caching proxy (~20 lines) on Cloudflare Workers free tier (100K req/day) that wraps Polymarket API and caches responses for 60 seconds
-* All users hit the Cloudflare proxy — cache means only ~1 real Polymarket API call per minute regardless of user count (~1,440 calls/day)
-* "Update" button = client-side `fetch()` from the proxy
-* New market detection happens on every fetch automatically
+1. **Volume floor** (`MIN_VOLUME_FOR_INTERPOLATION = $1,000`): `buildCdfPoints()` skips any market below this volume. This excludes brand-new markets from the CDF/PDF curves, key statistics, and timeline chart. The market table still shows all markets (it iterates over `markets` directly).
 
-### Alternative: Option A — Static Site + GitHub Actions (no proxy)
+2. **Age gate in timeline** (`NEW_MARKET_HOURS = 48h`): `buildMedianTimeline()` skips a market from any historical snapshot within 48h of its first price history entry. This prevents the early unreliable prices (thin order book, ~50% default) from creating misleading spikes in the "Predicted End Date Over Time" chart.
 
-* GitHub Actions cron (every 5 min minimum) fetches Polymarket data and commits JSON files to repo
-* Static site on GitHub Pages loads pre-built JSON
-* Only ~288 Polymarket API calls/day from Actions
-* Simpler (no Cloudflare dependency) but data is 5 min stale minimum
-* Client-side "Update" button would need CORS access to Polymarket (uncertain)
-* Historical data accumulates in repo JSON files over time
+## Timeline Chart Spike Prevention
 
-### Quickest path: Option B — Keep Dash, Deploy to Render/Fly.io Free Tier
+The "Predicted End Date Over Time" chart had spikes when Polymarket added new markets for dates further in the future. When a new far-future market appears, the CDF suddenly extends to a much later date, causing the median/75th percentile to jump.
 
-* Minimal code changes, just deploy
-* Server-side cache: 1 API call serves all users
-* BUT: Render free tier sleeps after 15 min inactivity (30s cold start), limited CPU/RAM for thousands of concurrent Dash WebSocket connections
-* Dash sends full figure JSON on every update — bandwidth-heavy at scale
-* Free server hosting tiers could be discontinued
-
-### Hybrid Option D — GitHub Actions for History + Cloudflare for Live
-
-* Best of both worlds but most complex
-* Actions builds historical JSON archive, Cloudflare proxy provides live prices
-* Static site loads historical JSON + supplements with live data
+Fix: `buildMedianTimeline()` starts the timeline only after the farthest-deadline market has history data. This ensures the chart only shows periods where the full date range of markets was available, avoiding artificial jumps from market additions.
 
 ## Current App Architecture
 
-* `iran_dashboard/api.py` — Polymarket API layer (Gamma + CLOB), in-memory TTL caches (5min markets, 1hr histories), parallel fetching with ThreadPoolExecutor
-* `iran_dashboard/data.py` — PCHIP interpolation for CDF, np.gradient for PDF, historical snapshot reconstruction, monotonicity enforcement via forward-clipping
-* `iran_dashboard/callbacks.py` — Dash callbacks: data fetch (triggered by dcc.Interval), chart render (CDF/PDF toggle, time slider, joy plot), market table
-* `iran_dashboard/joy_plot.py` — TensorBoard-style ridge plot: global normalization, 30 tightly-packed ridges, opaque fills for 3D layered effect, drawn oldest-first so newest occludes
-* `iran_dashboard/layout.py` — Dash layout with controls, chart, market table
-* `iran_dashboard/app.py` — Entry point, `uv run iran-dashboard` starts server on port 8050
+Static site (GitHub Pages) + Cloudflare Workers caching proxy.
+
+* `docs/index.html` — Page layout, stats section, controls, chart containers, info section
+* `docs/js/config.js` — Constants: worker URL, volume thresholds, refresh interval
+* `docs/js/api.js` — Polymarket API layer: fetches from Cloudflare Worker proxy, parses market dates, classifies markets
+* `docs/js/data.js` — PCHIP interpolation for CDF, central differences for PDF, historical snapshot reconstruction, monotonicity enforcement, median timeline builder
+* `docs/js/charts.js` — Plotly.js chart rendering: main CDF/PDF chart, timeline chart, market table, key statistics
+* `docs/js/app.js` — State management, event listeners, render loop
+* `docs/css/styles.css` — All styles
+* `worker/worker.js` — Cloudflare Worker caching proxy (~80 lines): wraps Polymarket Gamma + CLOB APIs, 60s/300s cache TTLs
+* `dev_server.py` — Local dev server: serves `docs/` static files + proxies `/api/*` to Polymarket with in-memory caching. Also serves `/api/all` bundle endpoint for faster local loads.
 * `screenshot.py` — Playwright helper for taking dashboard screenshots (used for development iteration)
-* Key Dash pattern: `uirevision="stable"` preserves zoom/pan across callback updates
+* Key Plotly pattern: `uirevision="stable"` preserves zoom/pan across callback updates
 * Zoom buttons use Plotly `updatemenus` with `method="relayout"` to set `xaxis.range`
+
+## Deployment
+
+* Static site: push to `main`, GitHub Pages deploys from `docs/`
+* Cloudflare Worker: `cd worker && npx wrangler deploy`
+* For local dev: set `WORKER_URL = ""` in `config.js`, run `uv run python dev_server.py`
+* **Remember to set `WORKER_URL` back to the production URL before committing**

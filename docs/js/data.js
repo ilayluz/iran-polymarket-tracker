@@ -147,6 +147,7 @@ function buildCdfPoints(markets, prices = null, anchorDate = null) {
   for (const m of markets) {
     const deadlineOrd = dateToOrdinal(m.deadlineDate);
     if (deadlineOrd <= anchorOrd) continue; // skip past-due
+    if (m.volume < MIN_VOLUME_FOR_INTERPOLATION) continue; // skip unreliable markets
 
     let p;
     if (prices !== null) {
@@ -379,13 +380,20 @@ function buildMedianTimeline(markets, histories) {
       asOfDate.getUTCFullYear(), asOfDate.getUTCMonth(), asOfDate.getUTCDate()
     ));
 
-    // Binary search for each market's price at this timestamp
+    // Binary search for each market's price at this timestamp.
+    // Skip markets whose history started less than MIN_MARKET_AGE_HOURS ago
+    // relative to this snapshot — their early prices are unreliable noise.
+    const MIN_MARKET_AGE = NEW_MARKET_HOURS * 3600; // seconds
     const prices = {};
     for (const m of markets) {
       const tid = m.yesTokenId;
       if (!tid || !sortedHistories[tid]) continue;
+      if (m.volume < MIN_VOLUME_FOR_INTERPOLATION) continue;
       const hist = sortedHistories[tid];
       if (hist.length === 0) continue;
+
+      // Skip if market is too new at this snapshot time
+      if (ts - hist[0].t < MIN_MARKET_AGE) continue;
 
       // Binary search: find largest t <= ts
       let lo = 0, hi = hist.length - 1, best = -1;

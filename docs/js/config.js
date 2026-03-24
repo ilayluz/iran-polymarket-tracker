@@ -7,6 +7,7 @@
 //   "https://iran-polymarket-proxy.<your-subdomain>.workers.dev"
 const WORKER_URL = "https://iran-polymarket-proxy.iran-polymarket-tracker.workers.dev";
 
-const LOW_VOLUME_THRESHOLD = 100_000; // $100K
+const LOW_VOLUME_THRESHOLD = 100_000; // $100K — visual styling (faded markers/rows)
+const MIN_VOLUME_FOR_INTERPOLATION = 1_000; // $1K — markets below this are excluded from curves
 const NEW_MARKET_HOURS = 48;
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
